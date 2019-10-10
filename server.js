@@ -20,67 +20,74 @@ const db = knex({
   }
 });
 
-console.log(db.select('*').from('users'));
-
-let dataBase = {
-  users: [
-    {
-      id: '1',
-      name: 'john',
-      email: 'john@email.com',
-      password: 'johnspassword',
-      savedRecipes: 0
-    },
-    {
-      id: '2',
-      name: 'jane',
-      email: 'jane@email.com',
-      password: 'janespassword',
-      savedRecipes: 0
-    }
-  ]
-};
-
 app.get('/', (req, res) => {
   res.send(dataBase.users);
 })
 
 app.get('/profile/:id', (req, res) => {
   const { id } = req.params;
-  let found = false;
 
-  dataBase.users.forEach(user => {
-    if (user.id === id) {
-      found = true;
-      return res.json(user);
-    }
-  })
-  if (!found) {
-    res.status(400).json('user not found');
-  }
+  db.select('*').from('users')
+    .where({ id })
+    .then(user => {
+      if (user.length) {
+        res.json(user[0])
+      } else {
+        res.status(400).json('Not Found')
+      }
+    })
+    .catch(err => res.status(400).json('Error getting user'));
 })
 
 app.post('/register', (req, res) => {
   let { email, name, password } = req.body;
 
-  dataBase.users.push({
-    id: '3',
-    name: name,
-    email: email,
-    password: password,
-    savedRecipes: 0
-  });
+  const hash = bcrypt.hashSync(password, saltRounds);
 
-  res.send(dataBase.users[dataBase.users.length - 1]);
+  db.transaction(trx => {
+    trx.insert({
+      hash: hash,
+      email: email
+    })
+    .into('login')
+    .returning('email')
+    .then(loginEmail => {
+      return trx('users')
+      .returning('*')
+      .insert({
+        email: loginEmail[0],
+        name: name,
+        joined: new Date()
+      })
+      .then(user => {
+        res.send(user[0]);
+      })
+    })
+    .then(trx.commit)
+    .catch(trx.rollback)
+  })
+
+  .catch(err => res.status(400).json('unable to register'));
 })
 
 app.post('/signin', (req, res) => {
-  if (req.body.email === dataBase.users[0].email &&
-      req.body.password === dataBase.users[0].password) {
-        res.json(res.json(dataBase.users[0]));
+  db.select('email', 'hash').from('login')
+    .where('email', '=', req.body.email)
+    .then(data => {
+      const isValid = bcrypt.compareSync(req.body.password, data[0].hash);
+
+      if (isValid) {
+        return db.select('*').from('users')
+          .where('email', '=', req.body.email)
+          .then(user => {
+            res.json(user[0])
+          })
+          .catch(err => res.status(400).json('unable to get user'))
       } else {
-        res.status(400).json('Invalid email or password');
+        res.status(400).json('wrong credentials')
       }
+    })
+    .catch(err => res.status(400).json('wrong credentials'))
 })
 
 app.put('/recipes', (req, res) => {
