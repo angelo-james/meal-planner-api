@@ -5,9 +5,22 @@ const bodyParser = require('body-parser');
 const cors = require('cors');
 const bcrypt = require('bcrypt');
 const saltRounds = 10;
+const knex = require('knex');
 
 app.use(cors());
 app.use(bodyParser.json());
+
+const db = knex({
+  client: 'pg',
+  connection: {
+    host: '127.0.0.1',
+    user: 'aj',
+    password: '',
+    database: 'meal-planner-db'
+  }
+});
+
+console.log(db.select('*').from('users'));
 
 let dataBase = {
   users: [
@@ -49,7 +62,7 @@ app.get('/profile/:id', (req, res) => {
 
 app.post('/register', (req, res) => {
   let { email, name, password } = req.body;
-  
+
   dataBase.users.push({
     id: '3',
     name: name,
