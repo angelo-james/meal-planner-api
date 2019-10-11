@@ -20,10 +20,6 @@ const db = knex({
   }
 });
 
-app.get('/', (req, res) => {
-  res.send(dataBase.users);
-})
-
 app.get('/profile/:id', (req, res) => {
   const { id } = req.params;
 
@@ -37,6 +33,25 @@ app.get('/profile/:id', (req, res) => {
       }
     })
     .catch(err => res.status(400).json('Error getting user'));
+})
+
+app.put('/recipe', (req,res) => {
+  let { recipe, email } = req.body;
+
+  db.insert({
+    recipe: recipe,
+    email: email
+  })
+  .into('userrecipes')
+  .then(data => {
+    return db.select('*').from('userrecipes')
+    .where('email', '=', email)
+    .then(recipes => {
+      res.json(recipes)
+    })
+  })
+
+  .catch(err => res.status(400).json('unable to save recipe'));
 })
 
 app.post('/register', (req, res) => {
@@ -90,24 +105,29 @@ app.post('/signin', (req, res) => {
     .catch(err => res.status(400).json('wrong credentials'))
 })
 
-app.put('/recipes', (req, res) => {
-  const { id } = req.body;
-  let found = false;
-
-  dataBase.users.forEach(user => {
-    if (user.id === id) {
-      found = true;
-      user.savedRecipes++;
-      return res.json(user.savedRecipes);
-    }
+app.get('/recipes/:email', (req, res) => {
+  const { email } = req.params;
+  
+  db.select('*').from('userrecipes')
+  .where('email', '=', email)
+  .then(data => {
+    res.json(data)
   })
-  if (!found) {
-    res.status(400).json('user not found');
-  }
 })
 
 app.delete('/recipes', (req, res) => {
-  
+  let { email, recipe } = req.body;
+
+  db.del().from('userrecipes').where({
+    email,
+    recipe
+  })
+  .then(response => {
+    res.json('Recipe was removed')
+  })
+  .catch(err => {
+    res.json('Invalid request');
+  })
 })
 
 app.listen(PORT, () => {
