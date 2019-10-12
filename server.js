@@ -122,11 +122,12 @@ app.delete('/recipes', (req, res) => {
     email,
     recipe
   })
-  .then(response => {
-    res.json('Recipe was removed')
-  })
-  .catch(err => {
-    res.json('Invalid request');
+  .then(data => {
+    return db.select('*').from('userrecipes')
+    .where('email', '=', email)
+    .then(recipes => {
+      res.json(recipes)
+    })
   })
 })
 
