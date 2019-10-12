@@ -10,13 +10,28 @@ const knex = require('knex');
 app.use(cors());
 app.use(bodyParser.json());
 
+
+/*
+
+the db below is for development when testing on localhost
+VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV
+*/
+// const db = knex({
+//   client: 'pg',
+//   connection: {
+//     host: '127.0.0.1',
+//     user: 'aj',
+//     password: '',
+//     database: 'meal-planner-db'
+//   }
+// });
+
+
+
 const db = knex({
   client: 'pg',
-  connection: {
-    host: '127.0.0.1',
-    user: 'aj',
-    password: '',
-    database: 'meal-planner-db'
+  connectionString: {
+    host: process.env.DATABASE_URL,
   }
 });
 
