@@ -36,20 +36,43 @@ app.get('/profile/:id', (req, res) => {
 app.put('/recipe', (req,res) => {
   let { recipe, email } = req.body;
 
-  db.insert({
-    recipe: recipe,
-    email: email
+  db.select('*').from('userrecipes')
+    .then(data => {
+      if (data.length === 0) {
+        db.insert({
+          recipe: recipe,
+          email: email
+        })
+        .into('userrecipes')
+        .then(data => {
+          return db.select('*').from('userrecipes')
+          .where('email', '=', email)
+          .then(recipes => {
+            res.json(recipes)
+          })
+        })
+          .catch(err => res.status(400).json('unable to save recipe'));
+      } else {
+          for (let i = 0; i < data.length; i++) {
+            if (data[i].recipe === recipe && data[i].email === email) {
+              return res.status(400).json('You saved that recipe')
+            }
+          }
+          db.insert({
+            recipe: recipe,
+            email: email
+          })
+          .into('userrecipes')
+          .then(data => {
+            return db.select('*').from('userrecipes')
+            .where('email', '=', email)
+            .then(recipes => {
+              res.json(recipes)
+            })
+          })
+          .catch(err => res.status(400).json('unable to save recipe'));
+    }
   })
-  .into('userrecipes')
-  .then(data => {
-    return db.select('*').from('userrecipes')
-    .where('email', '=', email)
-    .then(recipes => {
-      res.json(recipes)
-    })
-  })
-
-  .catch(err => res.status(400).json('unable to save recipe'));
 })
 
 app.post('/register', (req, res) => {
